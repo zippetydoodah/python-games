@@ -18,6 +18,7 @@ class Buttondisplay:
         self.ypos = ypos
         self.colour = colour
         self.equiprect = pygame.Rect(self.xpos,self.ypos,40,40)
+
     def render(self, screen):
         pygame.draw.rect(screen,self.colour,self.equiprect)
         
@@ -26,6 +27,7 @@ class Buttondisplay:
         if self.equiprect.collidepoint(pos):
             self.colour = s
             return True
+        
 class Wall:
     def __init__(self,x,y):
         

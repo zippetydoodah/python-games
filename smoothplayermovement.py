@@ -39,7 +39,7 @@ class Wall:
     def render(self,screen):
         pygame.draw.rect(screen,(colour),self.hitrect)
 
-for i in range(6):
+for i in range(3):
     x = COORDS[access][0]
     y = COORDS[access][1]
     w = COORDS[access][2]
