@@ -1,45 +1,132 @@
 import pygame
 import random
+import math
 pygame.init()
 clock = pygame.time.Clock()
 screen = pygame.display.set_mode((800, 650))
 screen.fill((0, 0, 0))
-move_up = False
-move_right = False
-move_left = False
-move_down = False
 exit = True
-velocity = 0
 gravity = 0.02
 colour = (100, 100, 100)
-px = 100
-py = 600
 walls = []
+enemys = []
 access = 0
 jump = 1
+shoot = False
+bullets = []
+
+MAP = {
+    "ground1":{
+        "exits":[("up","sky1"),("right","ground2"),("left","ground-1")],
+    },
+
+    "sky1":{
+        "exits":[("down","ground1"),("right","sky2"),("left","sky-1")],
+    },
+}
+PLAYERSTATS = {
+    "player":{
+        "healthbar":{
+            "health":100,
+            "max":100,
+            "min":0,
+            "location":[20,20,100,20],
+            "damage":1,
+        },
+    },
+
+}
 ENEMYSTATS = {
+
     "zombie": {
-        "damage": 2,
-        "enemyhealth": 10,
-        "col": (230, 25, 0),
+        "healthbar":{
+            "health":10,
+            "max":10,
+            "min":0,
+            "location":[20,20,10,5],
+            "damage": 2,
+            "col": (230, 25, 0),
+            "speed":0.25,
+        },
     },
 
     "goblin": {
-        "damage": 5,
-        "enemyhealth": 15,
-        "col": (25, 230, 0),
+        "healthbar":{
+            "health":15,    
+            "max":15,
+            "min":0,
+            "location":[20,20,15, 5],
+            "damage": 5,
+            "col": (25, 230, 0),
+            "speed":0.5,
+        },
     },
 }
 
+def getAvailableMoves (player):
+    global MAP
 
-class Health:
-    def __init__(self):
-        self.health = 100
-        self.max = 100
-        self.min = 0
-        self.x = 20
-        self.y = 20
+    movementOptions = MAP[player.location]["exits"]
+    availableMoves = []
+    moves = ""
+    for element in movementOptions:
+        availableMoves.append(element[0])
+    for element in availableMoves:
+        moves += (element)
+        moves += ", "
+    return moves
+
+def collisions(player):
+    global jump
+
+    for wall in walls:
+        hitrect = wall.hitrect
+        for bullet in bullets:
+            if bullet.bulletrect.colliderect(hitrect):
+                if not bullet.bulletrect.colliderect(player.hitrect):
+                    bullets.remove(bullet)
+
+        if player.hitrect.colliderect(hitrect):
+            jump = True
+            if not player.hitrect.colliderect(hitrect.move(4, 0)):
+                player.x -= 1
+        # Move the player away from the collision while considering the intended direction
+            if player.move_left and not player.hitrect.colliderect(hitrect.move(-4, 0)):
+                player.x += 1
+
+            elif player.move_right and not player.hitrect.colliderect(hitrect.move(4, 0)):
+                player.x -= 2
+
+            elif player.move_up and not player.hitrect.colliderect(hitrect.move(0, -4)):
+                    player.velocity = 0
+                    player.y += 0.5
+            elif player.move_down and not player.hitrect.colliderect(hitrect.move(0, 4)):
+                player.velocity = 0
+                player.y -= 0.5
+
+            elif player.move_right and player.move_down and not player.hitrect.colliderect(hitrect.move(4, 4)):
+                player.x -= 2
+
+            elif player.move_right and player.move_up and not player.hitrect.colliderect(hitrect.move(4, -4)):
+                player.x -= 2
+
+            elif player.move_left and player.move_down and not player.hitrect.colliderect(hitrect.move(-4, 4)):
+                player.x += 2
+
+            elif player.move_left and player.move_up and not player.hitrect.colliderect(hitrect.move(-4, -4)):
+                player.x += 2
+
+class Healthbar:
+    def __init__(self,place,person):
+        self.health = place[person]["healthbar"]["health"]
+        self.max = place[person]["healthbar"]["max"]
+        self.min = place[person]["healthbar"]["min"]
+        location = place[person]["healthbar"]["location"]
+        self.y = location[1]
+        self.x = location[0]
         self.distance = self.health
+        self.length = location[2]
+        self.width = location[3]
 
     def update(self, amount):
         self.health += amount
@@ -48,54 +135,135 @@ class Health:
         if self.health < self.min:
             self.health = self.min
         self.distance = self.health
-        print(self.distance)
+        print(self.health)
 
+    def move(self,x,y):
+        self.x = x
+        self.y = y - 10
     def display(self):
-        self.hitrect1 = pygame.Rect(self.x, self.y, 100, 20)
-        self.hitrect = pygame.Rect(self.x, self.y, self.distance, 20)
+        self.hitrect1 = pygame.Rect(self.x, self.y, self.length, self.width)
+        self.hitrect = pygame.Rect(self.x, self.y, self.distance, self.width)
         pygame.draw.rect(screen, (255, 0, 0), self.hitrect1)
         pygame.draw.rect(screen, (0, 255, 0), self.hitrect)
 
+class Bullet:
+    def __init__(self,x,y,destination):
+        self.destination = destination
+        self.x = x
+        self.y = y
+        self.speed = 4
+        self.bulletrect = pygame.Rect(self.x,self.y,10,10)
+
+        self.dx = self.destination[0]- self.x
+        self.dy = self.destination[1] - self.y
+        self.hyp = math.sqrt((self.dx * self.dx) + (self.dy * self.dy))
+
+    def render(self,screen):
+        self.bulletrect = pygame.Rect(self.x,self.y,10,10)
+        pygame.draw.rect(screen,(0,255,0),self.bulletrect)
+
+    def move(self):
+    
+        self.x += (self.dx / self.hyp * self.speed)
+        self.y += (self.dy / self.hyp * self.speed)
 
 class Player:
     def __init__(self, x, y):
         self.x = x
         self.y = y
         self.player = pygame.Surface((25, 25))
-        self.playerrect = pygame.Rect(self.x, self.y, 25, 25)
+        self.hitrect = pygame.Rect(self.x, self.y, 25, 25)
+        self.damage = PLAYERSTATS["player"]["healthbar"]["damage"]
+        self.healthbar = (Healthbar(PLAYERSTATS,"player"))
+        self.move_up = False
+        self.move_right = False
+        self.move_left = False
+        self.move_down = False
+        self.velocity = 0
+        self.location = ""
+
+    def move(self):
+        global shoot
+        global pos
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            shoot = True
+            pos = event.pos
+            #bullets.append(Bullet((player_x + 20),540,event.pos))
+        elif event.type == pygame.MOUSEBUTTONUP:
+            shoot = False
+
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP and jump:
+                # jump = False
+                self.velocity = -1.5
+                self.move_up = True
+                self.move_down = False
+
+            elif event.key == pygame.K_LEFT:
+                self.move_left = True
+                self.move_right = False
+
+            elif event.key == pygame.K_RIGHT:
+                self.move_right = True
+                self.move_left = False
+
+        elif event.type == pygame.KEYUP:
+            if event.key == pygame.K_LEFT:
+                self.move_left = False
+
+            elif event.key == pygame.K_RIGHT:
+                self.move_right = False
+
+        
+
 
     def render(self):
         screen.blit(self.player, (self.x, self.y))
         self.player.fill((200, 200, 200))
-        self.playerrect = pygame.Rect(self.x, self.y, 25, 25)
-
+        self.hitrect = pygame.Rect(self.x, self.y, 25, 25)
 
 class Enemy:
     def __init__(self, enemy, x, y):
-        self.health = ENEMYSTATS[enemy]["enemyhealth"]
-        self.damage = ENEMYSTATS[enemy]["damage"]
-        self.col = ENEMYSTATS[enemy]["col"]
+        self.health = ENEMYSTATS[enemy]["healthbar"]["health"]
+        self.damage = ENEMYSTATS[enemy]["healthbar"]["damage"]
+        self.col = ENEMYSTATS[enemy]["healthbar"]["col"]
         self.x = x
         self.y = y
-        self.speed = 0.5
-        self.enemyhitrect = pygame.Rect(self.x, self.y, 20, 20)
+        self.speed = ENEMYSTATS[enemy]["healthbar"]["speed"]
+        self.hitrect = pygame.Rect(self.x, self.y, 20, 20)
+        self.move_left = False
+        self.move_right = False
+        self.move_up = False
+        self.move_down = False
+        
+
+        self.healthbar = (Healthbar(ENEMYSTATS,enemy))
+        self.velocity = 0
+
 
     def move(self):
+
         if player.x > self.x:
             self.x += self.speed
+            self.move_right = True
+            self.move_left = False 
         else:
             self.x -= self.speed
+            self.move_right = False
+            self.move_left = True
 
-        # if player.y > self.y:
-        #     self.y += self.speed
-        # else:
-        #     self.y -= self.speed
-
-        self.enemyhitrect = pygame.Rect(self.x, self.y, 20, 20)
+        if player.y > self.y:
+            self.y += self.speed
+            self.move_up = False
+            self.move_down = True
+        else:
+            self.y -= self.speed
+            self.move_up = True
+            self.move_down = False
+        self.hitrect = pygame.Rect(self.x, self.y, 20, 20)
 
     def render(self):
-        pygame.draw.rect(screen, (self.col), self.enemyhitrect)
-
+        pygame.draw.rect(screen, (self.col), self.hitrect)
 
 class Wall:
     def __init__(self, y, w, t, h, r, direction):
@@ -118,7 +286,6 @@ class Wall:
     def render(self, screen):
         pygame.draw.rect(screen, (colour), self.hitrect)
 
-
 for i in range(6):
     for i in range(3):
         y = access
@@ -130,9 +297,11 @@ walls.append(Wall(630, 800, 800, 20, 0, 0))
 walls.append(Wall(0, 10, 800, 650, 0, 0))
 walls.append(Wall(0, 10, 10, 800, 790, 0))
 # floor,left wall,right wall
-player = (Player(px, py))
-health = (Health())
-enemy = (Enemy("zombie", 50, 600))
+player = (Player(100, 600))
+enemys.append(Enemy("zombie", 50, 600))
+enemys.append(Enemy("goblin", 50, 600))
+enemys.append(Enemy("goblin", 50, 500))
+
 while exit:
     clock.tick(120)
     screen.fill((0, 0, 0))
@@ -140,89 +309,75 @@ while exit:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             exit = False
+        player.move()
+        
 
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP and jump:
-                # jump = False
-                velocity = -1.5
-                move_up = True
-                move_down = False
-
-            elif event.key == pygame.K_LEFT:
-                move_left = True
-                move_right = False
-
-            elif event.key == pygame.K_RIGHT:
-                move_right = True
-                move_left = False
-
-        elif event.type == pygame.KEYUP:
-            if event.key == pygame.K_LEFT:
-                move_left = False
-
-            elif event.key == pygame.K_RIGHT:
-                move_right = False
-
-    if move_left:
-        player.x -= 1
-    if move_right:
+    if player.move_left:
+            player.x -= 1
+    if player.move_right:
         player.x += 1
 
-    if velocity > 0:
-        move_up = False
+    if player.velocity > 0:
+        player.move_up = False
     else:
-        move_up = True
+        player.move_up = True
 
-    if velocity < 0:
-        move_down = False
+    if player.velocity < 0:
+        player.move_down = False
     else:
-        move_down = True
+        player.move_down = True
 
-    for wall in walls:
-        hitrect = wall.hitrect
+    collisions(player)
+    for enemy in enemys:
+        collisions(enemy)
 
-        if player.playerrect.colliderect(hitrect):
+    for enemy in enemys:
 
-            jump = True
-            if not player.playerrect.colliderect(hitrect.move(4, 0)):
-                player.x -= 1
-        # Move the player away from the collision while considering the intended direction
-            if move_left and not player.playerrect.colliderect(hitrect.move(-4, 0)):
-                player.x += 1
+        enemy.move()
+        enemy.render()
+        enemy.healthbar.move(enemy.x,enemy.y)
+        enemy.healthbar.display()
+        hitrect = enemy.hitrect
 
-            elif move_right and not player.playerrect.colliderect(hitrect.move(4, 0)):
-                player.x -= 30
+        if enemy.healthbar.health == 0:
+            enemys.remove(enemy)
 
-            elif move_up and not player.playerrect.colliderect(hitrect.move(0, -4)):
-                velocity = 0
+        if hitrect.colliderect(player.hitrect):
+            if enemy.move_left == True:
+                player.x -= 10 
+            else:
+                player.x += 10 
+            player.healthbar.update(-enemy.damage)
+        
 
-            elif move_down and not player.playerrect.colliderect(hitrect.move(0, 4)):
-                velocity = 0
+        for bullet in bullets:
+            if hitrect.colliderect(bullet.bulletrect):
+                enemy.healthbar.update(-player.damage)
+                bullets.remove(bullet)
+                
+    
+    for bullet in bullets:
+        bullet.move()
+        bullet.render(screen)
+        if bullet.x >= 920 or bullet.x <= 0 or bullet.y >= 610 or bullet.y <= 0:
+            bullets.remove(bullet)
+        
+    if shoot:
+        bullets.append(Bullet((player.x + 10),(player.y +10),pos))
+    
+    if len(bullets) >= 1:
+        shoot = False
+    
 
-            elif move_right and move_down and not player.playerrect.colliderect(hitrect.move(4, 4)):
-                player.x -= 2
+    player.y += player.velocity
+    player.velocity += gravity
 
-            elif move_right and move_up and not player.playerrect.colliderect(hitrect.move(4, -4)):
-                player.x -= 2
-
-            elif move_left and move_down and not player.playerrect.colliderect(hitrect.move(-4, 4)):
-                player.x += 2
-
-            elif move_left and move_up and not player.playerrect.colliderect(hitrect.move(-4, -4)):
-                player.x += 2
-
-    enemy.move()
-    enemy.render()
-    if player.playerrect.colliderect(enemy.enemyhitrect):
-        health.update(-10)
-        player.x += 20
-    player.y += velocity
-    velocity += gravity
-
-    health.display()
-    player.render()
+    if player.healthbar.health != 0:
+        player.healthbar.display()
+        player.render()
 
     for wall in walls:
         wall.render(screen)
         wall.move()
+    
     pygame.display.flip()
