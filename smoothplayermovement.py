@@ -11,7 +11,6 @@ colour = (100, 100, 100)
 walls = []
 enemys = []
 access = 0
-jump = 1
 shoot = False
 bullets = []
 
@@ -77,7 +76,6 @@ def getAvailableMoves (player):
     return moves
 
 def collisions(player):
-    global jump
 
     for wall in walls:
         hitrect = wall.hitrect
@@ -87,7 +85,7 @@ def collisions(player):
                     bullets.remove(bullet)
 
         if player.hitrect.colliderect(hitrect):
-            jump = True
+            player.jump = True
             if not player.hitrect.colliderect(hitrect.move(4, 0)):
                 player.x -= 1
         # Move the player away from the collision while considering the intended direction
@@ -163,7 +161,6 @@ class Bullet:
         pygame.draw.rect(screen,(0,255,0),self.bulletrect)
 
     def move(self):
-    
         self.x += (self.dx / self.hyp * self.speed)
         self.y += (self.dy / self.hyp * self.speed)
 
@@ -181,6 +178,7 @@ class Player:
         self.move_down = False
         self.velocity = 0
         self.location = ""
+        self.jump = True
 
     def move(self):
         global shoot
@@ -193,8 +191,8 @@ class Player:
             shoot = False
 
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP and jump:
-                # jump = False
+            if event.key == pygame.K_UP and self.jump:
+                # self.jump = False
                 self.velocity = -1.5
                 self.move_up = True
                 self.move_down = False
@@ -235,8 +233,7 @@ class Enemy:
         self.move_right = False
         self.move_up = False
         self.move_down = False
-        
-
+        self.jump = True
         self.healthbar = (Healthbar(ENEMYSTATS,enemy))
         self.velocity = 0
 
@@ -252,14 +249,23 @@ class Enemy:
             self.move_right = False
             self.move_left = True
 
-        if player.y > self.y:
-            self.y += self.speed
+        if self.velocity == 0 :
+            if self.jump == True:
+                if player.y < self.y:
+                    self.velocity = -1.5
+                    self.jump = False
+                    
+        if self.velocity > 0:
             self.move_up = False
-            self.move_down = True
         else:
-            self.y -= self.speed
             self.move_up = True
+
+        if self.velocity < 0:
             self.move_down = False
+        else:
+            self.move_down = True
+
+            
         self.hitrect = pygame.Rect(self.x, self.y, 20, 20)
 
     def render(self):
@@ -368,6 +374,9 @@ while exit:
     if len(bullets) >= 1:
         shoot = False
     
+    for enemy in enemys:
+        enemy.y += enemy.velocity
+        enemy.velocity += gravity
 
     player.y += player.velocity
     player.velocity += gravity

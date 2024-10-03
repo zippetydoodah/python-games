@@ -85,9 +85,11 @@ while exit:
                 player_x = plat.rect.right
             if velocity > 0:
                 player_x = plat.rect.left - playerrect.width
+
             elif vvelocity > 0:  # Falling down; hit the top of the platform
                 player_y = plat.rect.top - playerrect.height
                 vvelocity = 0
+                
             elif vvelocity < 0:  # Moving up; hit the bottom of the platform
                 player_y = plat.rect.bottom
                 vvelocity = 0

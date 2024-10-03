@@ -22,8 +22,8 @@ while running:
             sys.exit()
 
     # Move player rect to the right by 5 pixels
-    if True:
-        new_player_rect = player_rect.move(velocity, 2)
+    
+    new_player_rect = player_rect.move(velocity, 2)
 
     # Draw original and moved rect
     pygame.draw.rect(screen, (0, 255, 0), player_rect)

@@ -2,7 +2,7 @@ import pygame
 import sys
 pygame.init()
 clock = pygame.time.Clock()
-
+equiped_weapon = "fists"
 MAP = {
     "forest1": {
         "name":"forest",
@@ -104,7 +104,7 @@ class TextDisplay:
 
     def render(self, screen):
         textRect = self.text.get_rect()
-        textRect.center = (self.xpos // 2, self.ypos // 2)
+        textRect.center = (self.xpos // 1, self.ypos // 1)
         screen.blit(self.text, textRect)
 
     def setText(self, text):
@@ -112,23 +112,26 @@ class TextDisplay:
 
     def setcoords(self,xpos,ypos,screen):
         textRect = self.text.get_rect()
-        textRect.center = (xpos // 2, ypos // 2)
+        textRect.center = (xpos // 1, ypos // 1)
         screen.blit(self.text,textRect)
 
 
 class Buttondisplay:
-    def __init__(self, xpos, ypos,colour):
+    def __init__(self, xpos, ypos,colour,name):
         self.xpos = xpos
         self.ypos = ypos
         self.colour = colour
+        self.name = name
         self.equiprect = pygame.Rect(self.xpos,self.ypos,40,40)
+        self.text = TextDisplay(self.xpos, self.ypos, self.name)
+
     def render(self, screen):
         pygame.draw.rect(screen,self.colour,self.equiprect)
-        
-    
+        self.text.render(screen)
     def clicked(self,pos,s):
         if self.equiprect.collidepoint(pos):
             self.colour = s
+            return self.name
 
 
 screen = pygame.display.set_mode([900, 600])
@@ -151,19 +154,15 @@ def equiploop(e):
     buttons = [] 
     items = getitems("weapon")
     number_of_times = len(items)
-    update_equipdisplay(items,900,100)
+    global equiped_weapon
+    
     for i in range(number_of_times):
-        buttons.append(Buttondisplay(x,400,(100,100,100)))
-        x += 80
+        buttons.append(Buttondisplay(x,400,(100,100,100),items[i]))
+        x += 300
+        print(items[i])
 
     while e:
-        
         screen.fill((255, 255, 255))
-        
-        
-        for display in equipitemdisplay:
-            display.render(screen)
-
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
@@ -172,13 +171,17 @@ def equiploop(e):
             if event.type == pygame.MOUSEBUTTONDOWN:
                 col = (200,200,200)
                 for button in buttons:
-                    button.clicked(event.pos,col)
+                    buttonname = button.clicked(event.pos,col)
+                    if buttonname != None:
+                        equiped_weapon = buttonname
+                        print(buttonname)
+                        
             elif event.type == pygame.MOUSEBUTTONUP:
                 col = (100,100,100)
                 for button in buttons:
                     button.clicked(event.pos,col)
-                        
-        equipdisplay.render(screen) 
+                    
+
         for button in buttons:
             button.render(screen)
         pygame.display.flip()
@@ -196,12 +199,6 @@ def getitems(items):
             newnames.append(element)
     return newnames
 
-def update_equipdisplay(place, xpos, ypos):
-    global equipitemdisplay
-    equipitemdisplay = []
-    for element  in place:
-        equipitemdisplay.append(TextDisplay(xpos, ypos, element,))
-        ypos += 50
 
 
 def updateinventory(place, xpos, ypos):

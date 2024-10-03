@@ -52,8 +52,8 @@ class Towers:
         pygame.draw.rect(screen,(255,0,0),self.towerrect)
 
 for i in range(10):
-        x += 60
-        towers.append(Towers(x,600))
+    x += 60
+    towers.append(Towers(x,600))
 
 
 player = (Plane(0,0))
